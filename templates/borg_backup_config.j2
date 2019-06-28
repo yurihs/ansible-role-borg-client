@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# {{ role_name }} - {{ item.name }}
+
+BORG_REPO="{{ item.repo }}"
+
+BACKUP_PATHS=(
+{% for path in item.paths %}
+"{{ path }}"
+{% endfor %}
+)
+
+{% if item.ssh is defined %}
+BORG_RSH="ssh -i "{{ item.ssh.key_path }}" -p {{ item.ssh.port | default(22) }}"
+{% endif %}
+
+{% if item.prune is defined %}
+PRUNE=1
+KEEP_HOURLY="{{ item.prune.keep_hourly }}"
+KEEP_DAILY="{{ item.prune.keep_daily }}"
+KEEP_WEEKLY="{{ item.prune.keep_weekly }}"
+KEEP_MONTHLY="{{ item.prune.keep_monthly }}"
+{% else %}
+PRUNE=0
+{% endif %}

@@ -1,0 +1,52 @@
+---
+
+- name: Install borg
+  apt:
+    name: borgbackup
+    state: present
+
+- name: "Copy script"
+  copy:
+    src: borg_backup_script
+    dest: /usr/local/bin/borg_backup_script
+    mode: 0755
+
+- name: "Create configuration directory"
+  file:
+    path: "{{ borg_client_config_dir }}"
+    state: directory
+
+- name: "Add managed configs"
+  template:
+    src: borg_backup_config.j2
+    dest: "{{ borg_client_config_dir }}/{{ item.name }}.conf"
+    mode: 0600
+  when: item.state|default('present') != 'absent'
+  with_items:
+    - "{{ borg_client_backup_list }}"
+
+- name: "Remove managed configs"
+  file:
+    path: "{{ borg_client_config_dir }}/{{ item.name }}.conf"
+    state: absent
+  when: item.state|default('present') == 'absent'
+  loop: "{{ borg_client_backup_list }}"
+
+- name: Add cron entries
+  cron:
+    name: "borg_client - {{ item.name }}"
+    minute: "{{ item.cron.minute }}"
+    hour: "{{ item.cron.hour }}"
+    day: "{{ item.cron.day }}"
+    month: "{{ item.cron.month }}"
+    weekday: "{{ item.cron.weekday }}"
+    job: "/usr/local/bin/borg_backup_script {{ borg_client_config_dir }}/{{ item.name }}.conf >> {{ borg_client_log_path }} 2>&1"
+  when: item.state|default('present') != 'absent' and item.cron is defined
+  loop: "{{ borg_client_backup_list }}"
+
+- name: Remove cron entries
+  cron:
+    name: "borg_client - {{ item.name }}"
+    state: absent
+  when: item.state|default('present') == 'absent'
+  loop: "{{ borg_client_backup_list }}"

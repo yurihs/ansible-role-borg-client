@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+# {{ ansible_managed }}
+
+set -o pipefail
+
+
+borg_create() {
+	borg create -v --stats \
+		'::{now:%Y-%m-%d %H:%M:%S}' \
+		"${BACKUP_PATHS[@]}"
+}
+
+
+borg_prune() {
+	borg prune -v --list \
+		--keep-hourly="$KEEP_HOURLY" \
+		--keep-daily="$KEEP_DAILY" \
+		--keep-weekly="$KEEP_WEEKLY" \
+		--keep-monthly="$KEEP_MONTHLY"
+}
+
+
+print_usage() {
+	echo "Usage:"
+	echo "    $0 <configuration_file>"
+	exit 1
+}
+
+
+load_config_file() {
+	local config_file="$1"
+
+	if [[ ! -r "$config_file" ]]; then
+		echo "Unable to read configuration file at \"${config_file}\"." 1>&2
+		exit 1
+	fi;
+	set -o allexport
+	source "$config_file"
+	set +o allexport
+}
+
+
+main() {
+	if [[ $# -ne 1 ]]; then
+		print_usage "$0"
+		exit
+	fi
+
+	local config_file="$1"
+	load_config_file "$config_file" && echo "Loaded configuration from \"${config_file}\"."
+
+	local fail=0
+
+	echo "Creating backup."
+	if borg_create; then
+		echo "Backup is done."
+	else
+		echo "Backup failed."
+		fail=1
+	fi;
+
+	if [[ $PRUNE -eq 1 ]]; then
+		echo "Pruning backups."
+		if borg_prune; then
+			echo "Pruning is done."
+		else
+			echo "Pruning failed."
+			fail=1
+		fi;
+	else
+		echo "Skipping pruning backups."
+	fi
+
+	if [[ $fail -ne 0 ]]; then
+		exit 1;
+	fi
+}
+
+
+main "$@"

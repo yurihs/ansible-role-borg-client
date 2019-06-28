@@ -1,0 +1,5 @@
+---
+
+borg_client_log_path: /var/log/borg_client.log
+
+borg_client_config_dir: /etc/borg_client
