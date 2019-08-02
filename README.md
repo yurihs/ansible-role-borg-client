@@ -80,7 +80,7 @@ borg init --encryption=none borg@backup.example.com:app_uploads
           month: '*'
           weekday: '*'
         ssh:
-          key: /root/.ssh/id_app
+          key_path: /root/.ssh/id_app
         prune:
           keep_hourly: 5
           keep_daily: 5
